@@ -1,18 +1,41 @@
 def steps() :
-    turns=["x", "x2", "x'", "y", "y2", "y'", "U", "U2", "U'", "R", "R2", "R'", "F", "F2", "F'"]
+    turns=["x", "x2", "x'", "y", "y2", "y'", "U", "U2", "U'", "R", "R2", "R'", "F", "F2", "F'", "RESET"]
     print "SETTING UP ..."
     import cubeCns
     import cubeSlv_GraphIDA as IDA    
     
     from time import sleep
-    import serial    
+    import serial
     import pickle 
     
-    Arduino = serial.Serial("/dev/ttyACM0", 115200)
-    sleep(1)
+    #Arduino = serial.Serial("/dev/ttyUSB0", 115200)
+    try:
+        Arduino = serial.Serial("/dev/ttyACM0", 115200)
+    except:
+        try:
+           Arduino = serial.Serial("/dev/ttyUSB0", 115200)
+        except:
+            try:
+               Arduino = serial.Serial("/dev/ttyACM1", 115200)
+            except:
+                try:
+                   Arduino = serial.Serial("/dev/ttyUSB1", 115200)
+                except:
+                    print "Error Connecting Arduino"
+                    Arduino=7
+                    #return 0
+                
+    sleep(4)
+
+    print "\nRESETTING GRIPPERS."
+    #Attach Servos and then Reset Grippers
+    Arduino.write("*<17<15#")
     
-    print "\nCONSTRUCTING CUBE ...\nPlease Display The Mentioned Sides To The Camera."
+    
+    print "\nCONSTRUCTING CUBE ...\nCapturing Faces"
     Cube = cubeCns.matrixForm(Arduino)
+
+    
     with open('Matrix', 'rb') as comb:
         Cube=pickle.load(comb)
 
@@ -25,13 +48,19 @@ def steps() :
     print [turns[i] for i in Algo]
     
     print "\nSOLVING CUBE ..."
-    Arduino.write("*"+"".join('<'+str(k) for k in Algo)+"#")
+    
+    solution="*"+"".join('<'+str(k) for k in Algo)+"<15#"
+    print solution
+    
+      
+    Arduino.write(solution)
     if Arduino.read(1)!='N':
         print "Cube not solved"
         return 0
+
+    #Detach All Servos
+    Arduino.write("*16#")
     
     print '\n*** Cube Solved ***'
 
 steps()
-    
-    
